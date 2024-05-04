@@ -78,8 +78,8 @@ def main():
         with col6:
             type_energie_chauffage_appoint = st.selectbox("Type énergie appoint", list(energie_appoint_options.keys()))
         with col7:
-            chauffage_solaire = st.checkbox("Chauffage solaire")
-
+            chauffage_solaire_checkbox = st.checkbox("Chauffage solaire")
+            chauffage_solaire = 1 if chauffage_solaire_checkbox else 0
 
     # Ajoutez ici des widgets pour les autres caractéristiques...
 
