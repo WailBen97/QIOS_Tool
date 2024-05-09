@@ -1,6 +1,7 @@
 import streamlit as st
 from params_app import *
 from tool.preprocessing.data import obtenir_zone_climatique
+import requests
 
 def main():
     st.set_page_config(layout="wide")
@@ -77,12 +78,56 @@ def main():
             type_isolation_plancher_haut = st.selectbox("Type isolation plancher haut", list(type_isolation_options.keys()))
     # Un bouton pour traiter les entrées
     zone_climatique=obtenir_zone_climatique(code_postal)
-    st.write(f"La zone climatique pour le code postal {code_postal} est {zone_climatique}.")
 
     if st.button("Calculer"):
         # Ici, vous pourriez appeler une fonction qui traite ces données,
-        # comme faire une prédiction avec un modèle ML déjà entraîné
-        st.write("Résultats à venir...")  # Remplacez cela par votre logique de calcul ou prédiction
+            # Préparer les données pour l'API
+        data_to_send = {
+            "type_batiment_dpe": type_batiment_dpe_options[type_batiment_dpe],
+            "periode_construction_dpe": periode_construction_dpe_options[periode_construction_dpe],
+            "surface_habitable_logement": surface_habitable_logement,
+            "type_installation_chauffage": type_options[type_installation_chauffage],
+            "type_generateur_chauffage": generateur_chauffage_options[type_generateur_chauffage],
+            "nb_generateur_chauffage": nb_generateur_chauffage,
+            "type_energie_chauffage_appoint": energie_appoint_options[type_energie_chauffage_appoint],
+            "chauffage_solaire": chauffage_solaire,
+            "nb_generateur_chauffage": nb_generateur_chauffage,
+            "type_generateur_climatisation": generateur_climatisation_options[type_generateur_climatisation],
+            "type_installation_ecs": type_options[type_installation_ecs],
+            "type_generateur_ecs": generateur_ecs_options[type_generateur_ecs],
+            "ecs_solaire": ecs_solaire,
+            "nb_generateur_ecs": nb_generateur_ecs,
+            "type_ventilation": systeme_ventilation_options[type_ventilation],
+            "type_production_energie_renouvelable": type_energie_renouvelable_options[type_production_energie_renouvelable],
+            "type_vitrage": type_vitrage_options[type_vitrage],
+            "type_materiaux_menuiserie": type_materiaux_menuiserie_options[type_materiaux_menuiserie],
+            "type_gaz_lame": type_gaz_lame_options[type_gaz_lame],
+            "type_fermeture": type_fermeture_options[type_fermeture],
+            "traversant": traversant_options[traversant],
+            "type_isolation_mur_exterieur": type_isolation_options[type_isolation_mur_exterieur],
+            "type_isolation_plancher_bas": type_isolation_options[type_isolation_plancher_bas],
+            "type_isolation_plancher_haut": type_isolation_options[type_isolation_plancher_haut],
+            "zone_climatique": zone_climatique,
+        }
+
+        url ="http://127.0.0.1:8000/predict/"
+        response = requests.post(url, json=data_to_send)
+
+        if response.status_code == 200:
+            results = response.json()
+            # Extraire les valeurs spécifiques
+            conso_ep = results.get("conso_3_usages_ep_m2", [0])[0]  # Présume une liste, prend le premier élément
+            conso_ef = results.get("conso_3_usages_ef_m2", [0])[0]
+            emission_ges = results.get("emission_ges_3_usages_m2", [0])[0]
+          # Formatage sécurisé avec vérification du type pour éviter les erreurs de formatage
+            if isinstance(conso_ep, (int, float)) and isinstance(conso_ef, (int, float)) and isinstance(emission_ges, (int, float)):
+                st.write(f"La consommation d'énergie primaire est de {conso_ep:.2f} kWh/m².")
+                st.write(f"L'énergie finale est de {conso_ef:.2f} kWh/m².")
+                st.write(f"L'émission de GES est de {emission_ges:.2f} kg CO₂/m².")
+            else:
+                st.write("Les données reçues ne sont pas dans le format attendu.")
+        else:
+            st.error("Erreur de réponse de l'API : {}".format(response.status_code)) # Afficher un message d'erreur
 
 if __name__ == "__main__":
     main()
